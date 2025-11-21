@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./App.css";
 // Фиксированная комиссия МКК (сом)
 const MKK_FEE = 1000;
