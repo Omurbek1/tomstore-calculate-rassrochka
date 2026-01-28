@@ -27,3 +27,29 @@
 .read-the-docs {
   color: #888;
 }
+
+/* --- НОВЫЕ СТИЛИ ДЛЯ АНИМИРОВАННОГО ФОНА --- */
+
+/* 1. Настраиваем плавное переливание цветов */
+@keyframes gradientMovement {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 2. Класс, который мы добавим в App.tsx */
+.animated-bg {
+  /* Градиент: Белый -> Светло-голубой -> Мягкий синий */
+  background: linear-gradient(-45deg, #ffffff, #e0f2ff, #d6eaff, #f0f8ff);
+  background-size: 400% 400%;
+  animation: gradientMovement 15s ease infinite;
+  
+  /* Плавность при загрузке */
+  transition: background 0.5s ease;
+}
