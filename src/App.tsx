@@ -1,7 +1,9 @@
 import { useState } from "react";
 import "./App.css";
+
 // Фиксированная комиссия МКК (сом)
 const MKK_FEE = 1000;
+
 const MOTIVATIONAL_PHRASES = [
   "Ваш успех — это наша цель!",
   "Продавайте больше, зарабатывайте легче.",
@@ -16,106 +18,144 @@ const MOTIVATIONAL_PHRASES = [
 ];
 
 interface ResultsType {
-  productName: string;
   price: number;
+  initialPayment: number;
+  loanAmount: number; // Сумма кредита (Цена - Взнос)
+  // Банк
   bank3MonthsCommission: number;
+  bank6MonthsCommission: number;
   bank8MonthsCommission: number;
+  // МКК
   mkk3MonthsCommission: number;
   mkk6MonthsCommission: number;
   mkk9MonthsCommission: number;
+  // Ежемесячные платежи Банк
   monthlyBank3Months: number;
+  monthlyBank6Months: number;
   monthlyBank8Months: number;
+  // Ежемесячные платежи МКК
   monthlyMKK3Months: number;
   monthlyMKK6Months: number;
   monthlyMKK9Months: number;
+  // Итого Банк
   totalBank3Months: number;
+  totalBank6Months: number;
   totalBank8Months: number;
+  // Итого МКК
   totalMKK3Months: number;
   totalMKK6Months: number;
   totalMKK9Months: number;
 }
 
 function App() {
-  const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
+  const [initialPayment, setInitialPayment] = useState("");
   const [results, setResults] = useState<ResultsType | null>(null);
-  const [errorMessage, setErrorMessage] = useState(""); // Для замены alert()
+  const [errorMessage, setErrorMessage] = useState("");
+  const [copySuccess, setCopySuccess] = useState("");
 
-  // Состояние для хранения текущей мотивирующей фразы
   const [motivationalPhrase, setMotivationalPhrase] = useState(
-    MOTIVATIONAL_PHRASES[0]
+    MOTIVATIONAL_PHRASES[0],
   );
 
-  // Функция для выбора и установки случайной фразы
   const setRandomPhrase = () => {
     const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_PHRASES.length);
     setMotivationalPhrase(MOTIVATIONAL_PHRASES[randomIndex]);
   };
 
-  const handlePriceChange = (event) => {
-    // Разрешаем вводить только числа
+  const handlePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value.replace(/[^0-9]/g, "");
     setProductPrice(value);
     setResults(null);
+    setCopySuccess("");
+  };
+
+  const handleInitialPaymentChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = event.target.value.replace(/[^0-9]/g, "");
+    setInitialPayment(value);
+    setResults(null);
+    setCopySuccess("");
+  };
+
+  const handleReset = () => {
+    setProductPrice("");
+    setInitialPayment("");
+    setResults(null);
     setErrorMessage("");
+    setCopySuccess("");
   };
 
   const calculateCommissions = () => {
     const price = parseFloat(productPrice);
-    setErrorMessage(""); // Сброс ошибки
+    const initial = parseFloat(initialPayment) || 0;
+    setErrorMessage("");
+    setCopySuccess("");
 
     if (isNaN(price) || price <= 0) {
+      setErrorMessage("⚠️ Введите корректную стоимость товара.");
+      return;
+    }
+
+    if (initial >= price) {
       setErrorMessage(
-        "⚠️ Пожалуйста, введите корректную стоимость товара (больше нуля)."
+        "⚠️ Первоначальный взнос не может быть больше или равен цене товара.",
       );
       return;
     }
-    if (productName.trim() === "") {
-      setErrorMessage("⚠️ Пожалуйста, введите название товара.");
-      return;
-    }
 
-    // Обновляем мотивирующую фразу при каждом успешном расчете
     setRandomPhrase();
 
-    // --- 1. Расчеты Общей Комиссии (Ваши расходы, TomStore.kg) ---
-    const bank3MonthsCommission = price * 0.06;
-    const bank8MonthsCommission = price * 0.12;
-    const mkk3MonthsCommission = price * 0.15 + MKK_FEE;
-    const mkk6MonthsCommission = price * 0.25 + MKK_FEE;
-    const mkk9MonthsCommission = price * 0.3 + MKK_FEE;
+    // Сумма, на которую оформляется рассрочка
+    const loanAmount = price - initial;
 
-    // --- 2. Расчеты Общей Суммы к Выплате (Товар + Комиссия) ---
-    const totalBank3Months = price + bank3MonthsCommission;
-    const totalBank8Months = price + bank8MonthsCommission;
-    const totalMKK3Months = price + mkk3MonthsCommission;
-    const totalMKK6Months = price + mkk6MonthsCommission;
-    const totalMKK9Months = price + mkk9MonthsCommission;
+    // --- 1. Расчеты Общей Комиссии ---
+    // Для МКК добавляем MKK_FEE (1000 с) сразу в комиссию
+    const bank3MonthsCommission = loanAmount * 0.06;
+    const bank6MonthsCommission = loanAmount * 0.09;
+    const bank8MonthsCommission = loanAmount * 0.12;
 
-    // --- 3. Расчеты Ежемесячного Платежа (Расходы покупателя) ---
+    const mkk3MonthsCommission = loanAmount * 0.15 + MKK_FEE;
+    const mkk6MonthsCommission = loanAmount * 0.25 + MKK_FEE;
+    const mkk9MonthsCommission = loanAmount * 0.35 + MKK_FEE;
+
+    // --- 2. Расчеты Общей Суммы к Выплате ---
+    const totalBank3Months = loanAmount + bank3MonthsCommission;
+    const totalBank6Months = loanAmount + bank6MonthsCommission;
+    const totalBank8Months = loanAmount + bank8MonthsCommission;
+
+    const totalMKK3Months = loanAmount + mkk3MonthsCommission;
+    const totalMKK6Months = loanAmount + mkk6MonthsCommission;
+    const totalMKK9Months = loanAmount + mkk9MonthsCommission;
+
+    // --- 3. Расчеты Ежемесячного Платежа ---
     const monthlyBank3Months = totalBank3Months / 3;
+    const monthlyBank6Months = totalBank6Months / 6;
     const monthlyBank8Months = totalBank8Months / 8;
+
     const monthlyMKK3Months = totalMKK3Months / 3;
     const monthlyMKK6Months = totalMKK6Months / 6;
     const monthlyMKK9Months = totalMKK9Months / 9;
 
     setResults({
-      productName,
       price,
-      // Комиссии (Ваши расходы)
+      initialPayment: initial,
+      loanAmount,
       bank3MonthsCommission,
+      bank6MonthsCommission,
       bank8MonthsCommission,
       mkk3MonthsCommission,
       mkk6MonthsCommission,
       mkk9MonthsCommission,
-      // Общая сумма к выплате (НОВОЕ)
       totalBank3Months,
+      totalBank6Months,
       totalBank8Months,
       totalMKK3Months,
       totalMKK6Months,
       totalMKK9Months,
-      // Ежемесячные платежи
       monthlyBank3Months,
+      monthlyBank6Months,
       monthlyBank8Months,
       monthlyMKK3Months,
       monthlyMKK6Months,
@@ -123,26 +163,56 @@ function App() {
     });
   };
 
-  // Функция для форматирования чисел
-  const formatCurrency = (value) => {
-    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " сом";
+  const formatCurrency = (value: number) => {
+    return (
+      Math.round(value)
+        .toString()
+        .replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " с"
+    );
+  };
+
+  const copyToClipboard = () => {
+    if (!results) return;
+
+    const text = `
+📱 *Расчет рассрочки TomStore.kg*
+💰 Цена товара: ${formatCurrency(results.price)}
+💵 Первоначальный взнос: ${formatCurrency(results.initialPayment)}
+📉 Сумма рассрочки: ${formatCurrency(results.loanAmount)}
+
+🏦 *Через Банк:*
+🔹 3 мес: ${formatCurrency(results.monthlyBank3Months)} /мес
+🔹 6 мес: ${formatCurrency(results.monthlyBank6Months)} /мес
+🔹 8 мес: ${formatCurrency(results.monthlyBank8Months)} /мес
+
+🚀 *Через МКК (без банка):*
+🔸 3 мес: ${formatCurrency(results.monthlyMKK3Months)} /мес
+🔸 6 мес: ${formatCurrency(results.monthlyMKK6Months)} /мес
+🔸 9 мес: ${formatCurrency(results.monthlyMKK9Months)} /мес
+
+Ждем вас за покупками!
+    `;
+
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      setCopySuccess("✅ Скопировано!");
+      setTimeout(() => setCopySuccess(""), 3000);
+    });
   };
 
   return (
     <div
       style={{
         padding: "30px",
-        maxWidth: "900px", // Максимальная ширина для десктопа
-        width: "95%", // Использует 95% ширины экрана, адаптивно для мобильных
-        margin: "20px auto", // Центрирование
+        maxWidth: "900px",
+        width: "95%",
+        margin: "20px auto",
         fontFamily: "Inter, sans-serif",
         borderRadius: "15px",
         boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-        background: "linear-gradient(145deg, #f0f8ff 0%, #e8f0ff 100%)", // Нежный, профессиональный градиент
+        background: "linear-gradient(145deg, #f0f8ff 0%, #e8f0ff 100%)",
         border: "1px solid #d0d8e0",
       }}
     >
-      {/* --- Заголовок и Мотивация --- */}
       <h1
         style={{
           textAlign: "center",
@@ -152,37 +222,33 @@ function App() {
           fontWeight: "700",
           borderBottom: "3px solid #ffc107",
           paddingBottom: "10px",
-          textShadow: "1px 1px 1px rgba(0,0,0,0.05)",
         }}
       >
-        TomStore.kg: Сравнение Рассрочки
+        TomStore.kg: Калькулятор
       </h1>
 
-      {/* Мотивация (динамическая) */}
       <div
         style={{
           textAlign: "center",
           marginBottom: "30px",
-          padding: "20px",
+          padding: "15px",
           backgroundColor: "#ffffff",
           borderRadius: "10px",
-          boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
           border: "1px solid #c9e0f6",
         }}
       >
         <p
           style={{
-            fontSize: "1.2em",
+            fontSize: "1.1em",
             color: "#28a745",
             fontWeight: "600",
-            animation: "scaleIn 0.8s ease-out",
+            margin: 0,
           }}
         >
           ✨ {motivationalPhrase} ✨
         </p>
       </div>
 
-      {/* --- Поля ввода --- */}
       <div
         style={{
           marginBottom: "25px",
@@ -193,7 +259,6 @@ function App() {
           boxShadow: "0 5px 15px rgba(0,0,0,0.1)",
         }}
       >
-        {/* Сообщение об ошибке */}
         {errorMessage && (
           <div
             style={{
@@ -210,177 +275,192 @@ function App() {
           </div>
         )}
 
-        <label
-          htmlFor="name-input"
-          style={{
-            display: "block",
-            marginBottom: "5px",
-            fontWeight: "bold",
-            color: "#333",
-          }}
-        >
-          Название товара:
-        </label>
-        <input
-          id="name-input"
-          type="text"
-          value={productName}
-          onChange={(e) => setProductName(e.target.value)}
-          placeholder="Например, Ноутбук HP Spectre"
-          style={{
-            width: "100%",
-            padding: "12px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "1px solid #a0d9ef",
-            marginBottom: "15px",
-            boxSizing: "border-box",
-          }}
-        />
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "250px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "5px",
+                fontWeight: "bold",
+                color: "#333",
+              }}
+            >
+              Стоимость товара (сом):
+            </label>
+            <input
+              type="text"
+              value={productPrice}
+              onChange={handlePriceChange}
+              placeholder="Например, 65000"
+              style={{
+                width: "100%",
+                padding: "12px",
+                fontSize: "18px",
+                borderRadius: "8px",
+                border: "1px solid #a0d9ef",
+                marginBottom: "20px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
 
-        <label
-          htmlFor="price-input"
-          style={{
-            display: "block",
-            marginBottom: "5px",
-            fontWeight: "bold",
-            color: "#333",
-          }}
-        >
-          Стоимость товара (в сомах):
-        </label>
-        <input
-          id="price-input"
-          type="text"
-          value={productPrice}
-          onChange={handlePriceChange}
-          placeholder="Например, 65000"
-          style={{
-            width: "100%",
-            padding: "12px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "1px solid #a0d9ef",
-            marginBottom: "20px",
-            boxSizing: "border-box",
-          }}
-        />
+          <div style={{ flex: 1, minWidth: "250px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "5px",
+                fontWeight: "bold",
+                color: "#333",
+              }}
+            >
+              Первоначальный взнос (сом):
+            </label>
+            <input
+              type="text"
+              value={initialPayment}
+              onChange={handleInitialPaymentChange}
+              placeholder="0"
+              style={{
+                width: "100%",
+                padding: "12px",
+                fontSize: "18px",
+                borderRadius: "8px",
+                border: "1px solid #a0d9ef",
+                marginBottom: "20px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+        </div>
 
-        <button
-          onClick={calculateCommissions}
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "12px 25px",
-            backgroundColor: "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "18px",
-            fontWeight: "bold",
-            boxShadow: "0 4px 10px rgba(40,167,69,0.4)",
-            transition: "background-color 0.3s ease, transform 0.1s ease",
-          }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.backgroundColor = "#218838")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.backgroundColor = "#28a745")
-          }
-        >
-          Рассчитать все варианты 🚀
-        </button>
-      </div>
-
-      {/* --- Результаты расчетов --- */}
-      {results && (
-        <div>
-          <h3
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={calculateCommissions}
             style={{
-              color: "#0056b3",
-              borderBottom: "2px solid #ddd",
-              paddingBottom: "5px",
+              flex: 2,
+              padding: "12px 25px",
+              backgroundColor: "#28a745",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "18px",
+              fontWeight: "bold",
+              boxShadow: "0 4px 10px rgba(40,167,69,0.4)",
+              transition: "0.2s",
             }}
           >
-            📊 Результаты для "{results.productName}" (
-            {formatCurrency(results.price)})
-          </h3>
+            Рассчитать 🚀
+          </button>
+
+          <button
+            onClick={handleReset}
+            style={{
+              flex: 1,
+              padding: "12px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "16px",
+              fontWeight: "bold",
+              boxShadow: "0 4px 10px rgba(220, 53, 69, 0.4)",
+            }}
+          >
+            🔄 Сброс
+          </button>
+        </div>
+      </div>
+
+      {results && (
+        <div style={{ animation: "fadeIn 0.5s ease" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: "15px",
+              borderBottom: "2px solid #ddd",
+              paddingBottom: "10px",
+            }}
+          >
+            <h3 style={{ color: "#0056b3", margin: 0 }}>
+              📊 Итоги (Рассрочка на: {formatCurrency(results.loanAmount)})
+            </h3>
+            <button
+              onClick={copyToClipboard}
+              style={{
+                marginTop: "10px",
+                padding: "8px 15px",
+                backgroundColor: "#17a2b8",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              📋 Скопировать ответ
+            </button>
+          </div>
+
+          {copySuccess && (
+            <div
+              style={{
+                padding: "10px",
+                backgroundColor: "#d4edda",
+                color: "#155724",
+                borderRadius: "5px",
+                marginBottom: "15px",
+                textAlign: "center",
+              }}
+            >
+              {copySuccess}
+            </div>
+          )}
+
           <table
             style={{
               width: "100%",
               borderCollapse: "separate",
-              borderSpacing: "0 10px", // Отступы между строками
+              borderSpacing: "0 10px",
               textAlign: "center",
-              marginTop: "15px",
             }}
           >
             <thead>
-              <tr
-                style={{
-                  backgroundColor: "#007bff",
-                  color: "white",
-                  borderRadius: "5px",
-                }}
-              >
-                <th
-                  style={{
-                    padding: "15px",
-                    borderRadius: "8px 0 0 8px",
-                    width: "25%",
-                  }}
-                >
+              <tr style={{ backgroundColor: "#007bff", color: "white" }}>
+                <th style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
                   Условия
                 </th>
-                <th style={{ padding: "15px", width: "25%" }}>
-                  💰 Ваши Расходы (Комиссия)
-                </th>
+                <th style={{ padding: "12px" }}>Комиссия</th>
                 <th
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#ffc107",
                     color: "#333",
-                    fontWeight: "bold",
-                    width: "25%",
                   }}
                 >
-                  Общая сумма к выплате
+                  Всего к выплате
                 </th>
-                <th
-                  style={{
-                    padding: "15px",
-                    borderRadius: "0 8px 8px 0",
-                    width: "25%",
-                  }}
-                >
-                  💵 Платеж в мес. (Для клиента)
+                <th style={{ padding: "12px", borderRadius: "0 8px 8px 0" }}>
+                  В месяц
                 </th>
               </tr>
             </thead>
             <tbody>
               {/* Банк 3 мес. */}
-              <tr
-                style={{
-                  backgroundColor: "#e6f7ff",
-                  boxShadow: "0 2px 5px rgba(0, 123, 255, 0.1)",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderRight: "none",
-                    borderRadius: "8px 0 0 8px",
-                  }}
-                >
-                  🏦 **Банк, 3 мес. (6%)**
+              <tr style={{ backgroundColor: "#e6f7ff" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  🏦 Банк 3 мес (6%)
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "none",
-                    borderRight: "none",
+                    padding: "12px",
                     fontWeight: "bold",
                     color: "#0056b3",
                   }}
@@ -389,54 +469,66 @@ function App() {
                 </td>
                 <td
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#fff3cd",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "1px solid #ffc107",
-                    borderRight: "1px solid #ffc107",
                     fontWeight: "bold",
                   }}
                 >
-                  {" "}
-                  {/* Общая сумма к выплате */}
                   {formatCurrency(results.totalBank3Months)}
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "none",
+                    padding: "12px",
                     borderRadius: "0 8px 8px 0",
                     fontWeight: "bold",
+                    fontSize: "1.1em",
                   }}
                 >
                   {formatCurrency(results.monthlyBank3Months)}
                 </td>
               </tr>
-
-              {/* Банк 8 мес. */}
-              <tr
-                style={{
-                  backgroundColor: "#e6f7ff",
-                  boxShadow: "0 2px 5px rgba(0, 123, 255, 0.1)",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderRight: "none",
-                    borderRadius: "8px 0 0 8px",
-                  }}
-                >
-                  🏦 **Банк, 8 мес. (12%)**
+              {/* Банк 6 мес. */}
+              <tr style={{ backgroundColor: "#e6f7ff" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  🏦 Банк 6 мес (9%)
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "none",
-                    borderRight: "none",
+                    padding: "12px",
+                    fontWeight: "bold",
+                    color: "#0056b3",
+                  }}
+                >
+                  {formatCurrency(results.bank6MonthsCommission)}
+                </td>
+                <td
+                  style={{
+                    padding: "12px",
+                    backgroundColor: "#fff3cd",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {formatCurrency(results.totalBank6Months)}
+                </td>
+                <td
+                  style={{
+                    padding: "12px",
+                    borderRadius: "0 8px 8px 0",
+                    fontWeight: "bold",
+                    fontSize: "1.1em",
+                  }}
+                >
+                  {formatCurrency(results.monthlyBank6Months)}
+                </td>
+              </tr>
+              {/* Банк 8 мес. */}
+              <tr style={{ backgroundColor: "#e6f7ff" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  🏦 Банк 8 мес (12%)
+                </td>
+                <td
+                  style={{
+                    padding: "12px",
                     fontWeight: "bold",
                     color: "#0056b3",
                   }}
@@ -445,25 +537,19 @@ function App() {
                 </td>
                 <td
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#fff3cd",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "1px solid #ffc107",
-                    borderRight: "1px solid #ffc107",
                     fontWeight: "bold",
                   }}
                 >
-                  {" "}
-                  {/* Общая сумма к выплате */}
                   {formatCurrency(results.totalBank8Months)}
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #c9e0f6",
-                    borderLeft: "none",
+                    padding: "12px",
                     borderRadius: "0 8px 8px 0",
                     fontWeight: "bold",
+                    fontSize: "1.1em",
                   }}
                 >
                   {formatCurrency(results.monthlyBank8Months)}
@@ -471,28 +557,13 @@ function App() {
               </tr>
 
               {/* МКК 3 мес. */}
-              <tr
-                style={{
-                  backgroundColor: "#fffbe6",
-                  boxShadow: "0 2px 5px rgba(255, 193, 7, 0.1)",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderRight: "none",
-                    borderRadius: "8px 0 0 8px",
-                  }}
-                >
-                  💰 **МКК, 3 мес. (15% + {MKK_FEE}с)**
+              <tr style={{ backgroundColor: "#fffbe6" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  💰 МКК 3 мес (15%)
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
-                    borderRight: "none",
+                    padding: "12px",
                     fontWeight: "bold",
                     color: "#ff8c00",
                   }}
@@ -501,54 +572,32 @@ function App() {
                 </td>
                 <td
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#fff3cd",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "1px solid #ffc107",
-                    borderRight: "1px solid #ffc107",
                     fontWeight: "bold",
                   }}
                 >
-                  {" "}
-                  {/* Общая сумма к выплате */}
                   {formatCurrency(results.totalMKK3Months)}
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
+                    padding: "12px",
                     borderRadius: "0 8px 8px 0",
                     fontWeight: "bold",
+                    fontSize: "1.1em",
                   }}
                 >
                   {formatCurrency(results.monthlyMKK3Months)}
                 </td>
               </tr>
-
               {/* МКК 6 мес. */}
-              <tr
-                style={{
-                  backgroundColor: "#fffbe6",
-                  boxShadow: "0 2px 5px rgba(255, 193, 7, 0.1)",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderRight: "none",
-                    borderRadius: "8px 0 0 8px",
-                  }}
-                >
-                  💰 **МКК, 6 мес. (25% + {MKK_FEE}с)**
+              <tr style={{ backgroundColor: "#fffbe6" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  💰 МКК 6 мес (25%)
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
-                    borderRight: "none",
+                    padding: "12px",
                     fontWeight: "bold",
                     color: "#ff8c00",
                   }}
@@ -557,54 +606,32 @@ function App() {
                 </td>
                 <td
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#fff3cd",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "1px solid #ffc107",
-                    borderRight: "1px solid #ffc107",
                     fontWeight: "bold",
                   }}
                 >
-                  {" "}
-                  {/* Общая сумма к выплате */}
                   {formatCurrency(results.totalMKK6Months)}
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
+                    padding: "12px",
                     borderRadius: "0 8px 8px 0",
                     fontWeight: "bold",
+                    fontSize: "1.1em",
                   }}
                 >
                   {formatCurrency(results.monthlyMKK6Months)}
                 </td>
               </tr>
-
               {/* МКК 9 мес. */}
-              <tr
-                style={{
-                  backgroundColor: "#fffbe6",
-                  boxShadow: "0 2px 5px rgba(255, 193, 7, 0.1)",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderRight: "none",
-                    borderRadius: "8px 0 0 8px",
-                  }}
-                >
-                  💰 **МКК, 9 мес. (30% + {MKK_FEE}с)**
+              <tr style={{ backgroundColor: "#fffbe6" }}>
+                <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                  💰 МКК 9 мес (35%)
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
-                    borderRight: "none",
+                    padding: "12px",
                     fontWeight: "bold",
                     color: "#ff8c00",
                   }}
@@ -613,25 +640,19 @@ function App() {
                 </td>
                 <td
                   style={{
-                    padding: "15px",
+                    padding: "12px",
                     backgroundColor: "#fff3cd",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "1px solid #ffc107",
-                    borderRight: "1px solid #ffc107",
                     fontWeight: "bold",
                   }}
                 >
-                  {" "}
-                  {/* Общая сумма к выплате */}
                   {formatCurrency(results.totalMKK9Months)}
                 </td>
                 <td
                   style={{
-                    padding: "15px",
-                    border: "1px solid #ffe0a3",
-                    borderLeft: "none",
+                    padding: "12px",
                     borderRadius: "0 8px 8px 0",
                     fontWeight: "bold",
+                    fontSize: "1.1em",
                   }}
                 >
                   {formatCurrency(results.monthlyMKK9Months)}
@@ -639,9 +660,11 @@ function App() {
               </tr>
             </tbody>
           </table>
+          {/* Убрали поясняющую надпись про 1000 сом, так как она уже включена "молча" */}
         </div>
       )}
     </div>
   );
 }
+
 export default App;
