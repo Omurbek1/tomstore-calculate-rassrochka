@@ -131,6 +131,7 @@ function App() {
   const [motivationalPhrase, setMotivationalPhrase] = useState(
     MOTIVATIONAL_PHRASES[0],
   );
+  console.log("Рендер приложения", motivationalPhrase);
 
   useEffect(() => {
     if (typeof navigator.share === "function") setCanShare(true);
