@@ -28,8 +28,9 @@ interface ResultsType {
   bank3MonthsCommission: number;
   bank6MonthsCommission: number;
   bank8MonthsCommission: number;
-  // Cash2U (НОВОЕ)
-  cash2uCommission: number; // 10%
+  bank12MonthsCommission: number;
+  // Cash2U
+  cash2uCommission: number;
   // МКК
   mkk3MonthsCommission: number;
   mkk6MonthsCommission: number;
@@ -39,7 +40,8 @@ interface ResultsType {
   monthlyBank3Months: number;
   monthlyBank6Months: number;
   monthlyBank8Months: number;
-  // Ежемесячные платежи Cash2U (НОВОЕ)
+  monthlyBank12Months: number;
+  // Ежемесячные платежи Cash2U
   monthlyCash2u3Months: number;
   monthlyCash2u6Months: number;
   // Ежемесячные платежи МКК
@@ -51,8 +53,9 @@ interface ResultsType {
   totalBank3Months: number;
   totalBank6Months: number;
   totalBank8Months: number;
-  // Итого Cash2U (НОВОЕ)
-  totalCash2u: number; // Общая сумма одинаковая для 3 и 6 мес (10%)
+  totalBank12Months: number;
+  // Итого Cash2U
+  totalCash2u: number;
   // Итого МКК
   totalMKK3Months: number;
   totalMKK6Months: number;
@@ -126,6 +129,7 @@ function App() {
     const bank3MonthsCommission = loanAmount * 0.06;
     const bank6MonthsCommission = loanAmount * 0.09;
     const bank8MonthsCommission = loanAmount * 0.12;
+    const bank12MonthsCommission = loanAmount * 0.16;
 
     // Cash2U (10% фикс)
     const cash2uCommission = loanAmount * 0.1;
@@ -140,8 +144,9 @@ function App() {
     const totalBank3Months = loanAmount + bank3MonthsCommission;
     const totalBank6Months = loanAmount + bank6MonthsCommission;
     const totalBank8Months = loanAmount + bank8MonthsCommission;
+    const totalBank12Months = loanAmount + bank12MonthsCommission;
 
-    // Cash2U (Сумма одна, делится на разное кол-во месяцев)
+    // Cash2U
     const totalCash2u = loanAmount + cash2uCommission;
 
     // МКК
@@ -154,6 +159,7 @@ function App() {
     const monthlyBank3Months = totalBank3Months / 3;
     const monthlyBank6Months = totalBank6Months / 6;
     const monthlyBank8Months = totalBank8Months / 8;
+    const monthlyBank12Months = totalBank12Months / 12;
 
     // Cash2U
     const monthlyCash2u3Months = totalCash2u / 3;
@@ -172,6 +178,8 @@ function App() {
       bank3MonthsCommission,
       bank6MonthsCommission,
       bank8MonthsCommission,
+      bank12MonthsCommission,
+
       // Cash2U
       cash2uCommission,
       // МКК
@@ -183,6 +191,7 @@ function App() {
       totalBank3Months,
       totalBank6Months,
       totalBank8Months,
+      totalBank12Months,
       totalCash2u,
       totalMKK3Months,
       totalMKK6Months,
@@ -192,12 +201,24 @@ function App() {
       monthlyBank3Months,
       monthlyBank6Months,
       monthlyBank8Months,
+      monthlyBank12Months,
       monthlyCash2u3Months,
       monthlyCash2u6Months,
       monthlyMKK3Months,
       monthlyMKK6Months,
       monthlyMKK9Months,
     });
+  };
+
+  // --- ОБРАБОТЧИК КЛАВИШ ---
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      calculateCommissions();
+    }
+    // Используем Escape для сброса, чтобы Delete работал для редактирования текста
+    if (e.key === "Escape") {
+      handleReset();
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -221,6 +242,7 @@ function App() {
 🔹 3 мес: ${formatCurrency(results.monthlyBank3Months)} /мес
 🔹 6 мес: ${formatCurrency(results.monthlyBank6Months)} /мес
 🔹 8 мес: ${formatCurrency(results.monthlyBank8Months)} /мес
+🔹 12 мес: ${formatCurrency(results.monthlyBank12Months)} /мес
 
 💜 *Cash2U (Быстро):*
 🟣 3 мес: ${formatCurrency(results.monthlyCash2u3Months)} /мес
@@ -342,6 +364,7 @@ function App() {
                 type="text"
                 value={productPrice}
                 onChange={handlePriceChange}
+                onKeyDown={handleKeyDown} // ДОБАВЛЕНО
                 placeholder="Например, 65000"
                 style={{
                   width: "100%",
@@ -370,6 +393,7 @@ function App() {
                 type="text"
                 value={initialPayment}
                 onChange={handleInitialPaymentChange}
+                onKeyDown={handleKeyDown} // ДОБАВЛЕНО
                 placeholder="0"
                 style={{
                   width: "100%",
@@ -401,7 +425,7 @@ function App() {
                 transition: "0.2s",
               }}
             >
-              Рассчитать 🚀
+              Рассчитать 🚀 (Enter)
             </button>
 
             <button
@@ -419,7 +443,7 @@ function App() {
                 boxShadow: "0 4px 10px rgba(220, 53, 69, 0.4)",
               }}
             >
-              🔄 Сброс
+              🔄 Сброс (Esc)
             </button>
           </div>
         </div>
@@ -613,9 +637,41 @@ function App() {
                     {formatCurrency(results.monthlyBank8Months)}
                   </td>
                 </tr>
+                <tr style={{ backgroundColor: "#e6f7ff" }}>
+                  <td style={{ padding: "12px", borderRadius: "8px 0 0 8px" }}>
+                    🏦 Банк 12 мес (16%)
+                  </td>
+                  <td
+                    style={{
+                      padding: "12px",
+                      fontWeight: "bold",
+                      color: "#0056b3",
+                    }}
+                  >
+                    {formatCurrency(results.bank12MonthsCommission)}
+                  </td>
+                  <td
+                    style={{
+                      padding: "12px",
+                      backgroundColor: "#fff3cd",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {formatCurrency(results.totalBank12Months)}
+                  </td>
+                  <td
+                    style={{
+                      padding: "12px",
+                      borderRadius: "0 8px 8px 0",
+                      fontWeight: "bold",
+                      fontSize: "1.1em",
+                    }}
+                  >
+                    {formatCurrency(results.monthlyBank12Months)}
+                  </td>
+                </tr>
 
-                {/* --- CASH2U (НОВОЕ) --- */}
-                {/* Используем светло-фиолетовый фон для отличия */}
+                {/* --- CASH2U --- */}
                 <tr
                   style={{
                     backgroundColor: "#f3e5f5",
