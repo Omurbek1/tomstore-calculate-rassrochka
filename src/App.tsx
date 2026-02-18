@@ -10,7 +10,14 @@ const STORE_2GIS = "https://go.2gis.com/LYINn";
 const INSTAGRAM_LINK = "https://instagram.com/tomstore.kg";
 
 // --- ПРОЦЕНТЫ ---
-const RATES = {
+type RateConfig = {
+  title: string;
+  type: string;
+  rates: { [month: number]: number };
+  fee?: number;
+};
+
+const RATES: { [key: string]: RateConfig } = {
   bank: {
     title: "🏦 Банк (Стандарт)",
     type: "bank",
@@ -114,12 +121,9 @@ function App() {
   );
   const [isMobile] = useState(() => {
     if (typeof navigator === "undefined") return false;
-    const ua =
-      navigator.userAgent || navigator.vendor || ((window as any)?.opera ?? "");
+    const ua = navigator.userAgent || navigator.vendor;
     return /Android|iPhone|iPad|iPod/i.test(ua);
   });
-
-  // Removed useEffect for canShare and isMobile
 
   const handleReset = () => {
     setProductPrice("");
@@ -143,7 +147,7 @@ function App() {
     const calculatedData: ProductResult[] = [];
     Object.entries(RATES).forEach(([key, config]) => {
       const rows: CalculationResult[] = [];
-      const fee = (config as any).fee || 0;
+      const fee = config?.fee || 0;
       Object.entries(config.rates).forEach(([monthStr, rate]) => {
         const months = parseInt(monthStr);
         const total = loan + loan * rate + fee;
@@ -186,7 +190,16 @@ function App() {
     if (isMobile && canShare && navigator.share) {
       try {
         await navigator.share({ title: "TomStore", text });
-      } catch (e) {}
+      } catch (e: Error | unknown) {
+        if (e instanceof Error && e.name !== "AbortError") {
+          setCopySuccess("⚠️ Не удалось поделиться, скопировано в буфер.");
+          navigator.clipboard.writeText(text);
+          setTimeout(() => setCopySuccess(""), 3000);
+        }
+        return;
+      } finally {
+        setCopySuccess("");
+      }
     } else {
       navigator.clipboard.writeText(text).then(() => {
         setCopySuccess("✅ Скопировано!");
