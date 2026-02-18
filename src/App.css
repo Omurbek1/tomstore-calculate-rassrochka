@@ -49,7 +49,7 @@
   background: linear-gradient(-45deg, #ffffff, #e0f2ff, #d6eaff, #f0f8ff);
   background-size: 400% 400%;
   animation: gradientMovement 15s ease infinite;
-  
+
   /* Плавность при загрузке */
   transition: background 0.5s ease;
 }
