@@ -62,8 +62,8 @@ const RATES = {
     fee: 1000, // ФИКСИРОВАННАЯ КОМИССИЯ 1000 СОМ
     rates: [
       { months: 3, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
-      { months: 6, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
-      { months: 9, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
+      { months: 6, rate: 0.25, label: "МКК", showRate: "25% + 1000с" },
+      { months: 9, rate: 0.35, label: "МКК", showRate: "35% + 1000с" },
     ],
   },
 };
