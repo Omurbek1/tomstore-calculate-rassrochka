@@ -4,76 +4,75 @@ import "./App.css";
 // --- НАСТРОЙКИ МАГАЗИНА ---
 const STORE_ADDRESS = "г. Бишкек, ул. Калык Акиев 66, ТЦ «Весна», 3 этаж, С 47";
 const STORE_PHONE = "0508 724 365";
-const STORE_PHONE_CLEAN = "0508724365";
 const WHATSAPP_PHONE = "996508724365";
-const STORE_2GIS = "https://go.2gis.com/LYINn";
-const INSTAGRAM_LINK = "https://instagram.com/tomstore.kg";
 
-// --- ПРОЦЕНТЫ ---
-type RateConfig = {
-  title: string;
-  type: string;
-  rates: { [month: number]: number };
-  fee?: number;
-};
-
-const RATES: { [key: string]: RateConfig } = {
+// --- КОНФИГУРАЦИЯ ПРОЦЕНТОВ ---
+const RATES = {
   bank: {
-    title: "🏦 Банк (Стандарт)",
+    title: "🏦 Банковская рассрочка",
     type: "bank",
-    rates: { 3: 0.06, 6: 0.11, 8: 0.12, 12: 0.16 },
-  },
-  mislamic: {
-    title: "☪️ M-Islamic",
-    type: "islamic",
-    rates: { 4: 0.06 },
+    rates: [
+      { months: 3, rate: 0.06, label: "Стандарт", showRate: "6%" },
+      {
+        months: 6,
+        rate: 0.09,
+        label: "M-Plus",
+        showRate: "9%",
+        color: "#10b981",
+      },
+      {
+        months: 6,
+        rate: 0.11,
+        label: "Zero",
+        showRate: "11%",
+        color: "#ef4444",
+      },
+      { months: 8, rate: 0.12, label: "Стандарт", showRate: "12%" },
+      { months: 12, rate: 0.19, label: "Стандарт", showRate: "19%" },
+    ],
   },
   cash2u: {
     title: "💜 Cash2U (Быстро)",
     type: "fast",
-    rates: { 3: 0.1, 6: 0.1 },
+    rates: [
+      {
+        months: 3,
+        rate: 0.1,
+        label: "Cash2U",
+        showRate: "10%",
+        color: "#a855f7",
+      },
+      {
+        months: 6,
+        rate: 0.1,
+        label: "Cash2U",
+        showRate: "10%",
+        color: "#a855f7",
+      },
+    ],
+  },
+  mislamic: {
+    title: "☪️ M-Islamic",
+    type: "islamic",
+    rates: [{ months: 4, rate: 0.06, label: "Стандарт", showRate: "6%" }],
   },
   mkk: {
-    title: "💰 МКК (Без банка)",
+    title: "💰 Без банка (МКК)",
     type: "fast",
-    rates: { 3: 0.15, 6: 0.25, 9: 0.35 },
-    fee: 1000,
+    fee: 1000, // ФИКСИРОВАННАЯ КОМИССИЯ 1000 СОМ
+    rates: [
+      { months: 3, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
+      { months: 6, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
+      { months: 9, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
+    ],
   },
 };
 
 const HOT_OFFERS = [
-  {
-    id: 1,
-    title: "Ноутбуки",
-    desc: "Гарантия качества",
-    price: "от 25 000 с",
-    icon: "💻",
-    tag: "ХИТ",
-  },
-  {
-    id: 2,
-    title: "Принтеры",
-    desc: "Epson, Canon, HP",
-    price: "от 12 500 с",
-    icon: "🖨️",
-    tag: "АКЦИЯ",
-  },
-  {
-    id: 3,
-    title: "Сборка ПК",
-    desc: "Любой бюджет",
-    price: "Game / Office",
-    icon: "🖥️",
-    tag: "PRO",
-  },
-  {
-    id: 4,
-    title: "Комплектующие",
-    desc: "SSD, ОЗУ, Видеокарты",
-    price: "от 1 500 с",
-    icon: "💾",
-    tag: "UPGRADE",
-  },
+  { id: 1, title: "Ноутбуки", price: "от 25 000 с", icon: "💻" },
+  { id: 2, title: "Принтеры", price: "от 4 500 с", icon: "🖨️" },
+  { id: 3, title: "Сборка ПК", price: "Game / Office", icon: "🖥️" },
+  { id: 4, title: "Запчасти", price: "от 1 500 с", icon: "💾" },
 ];
 
 const formatCurrency = (val: number) =>
@@ -85,635 +84,300 @@ const formatInputNumber = (val: string) =>
 const parseNumber = (val: string) =>
   parseFloat(val.replace(/[^0-9]/g, "")) || 0;
 
-const openWhatsApp = (msg: string) => {
-  window.open(
-    `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`,
-    "_blank",
-  );
-};
-
-interface CalculationResult {
-  month: number;
-  total: number;
-  monthly: number;
-  overpayment: number;
-  rate: number;
-}
-interface ProductResult {
-  key: string;
-  title: string;
-  type: string;
-  rows: CalculationResult[];
-}
-type TabType = "all" | "bank" | "islamic" | "fast";
 function App() {
   const [productPrice, setProductPrice] = useState("");
   const [initialPayment, setInitialPayment] = useState("");
-  const [results, setResults] = useState<ProductResult[] | null>(null);
+  const [results, setResults] = useState<any[] | null>(null);
   const [loanAmount, setLoanAmount] = useState(0);
-
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [copySuccess, setCopySuccess] = useState("");
-  const [canShare] = useState(
-    () =>
-      typeof navigator !== "undefined" && typeof navigator.share === "function",
-  );
-  const [isMobile] = useState(() => {
-    if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent || navigator.vendor;
-    return /Android|iPhone|iPad|iPod/i.test(ua);
-  });
 
-  const handleReset = () => {
-    setProductPrice("");
-    setInitialPayment("");
-    setResults(null);
-    setErrorMessage("");
-    setCopySuccess("");
-  };
-
-  const calculateCommissions = () => {
+  const calculate = () => {
     const price = parseNumber(productPrice);
     const initial = parseNumber(initialPayment);
-    if (price <= 0) return setErrorMessage("⚠️ Введите стоимость товара.");
-    if (initial >= price)
-      return setErrorMessage("⚠️ Взнос не может быть больше цены.");
-
-    setErrorMessage("");
+    if (price <= 0) return;
     const loan = price - initial;
     setLoanAmount(loan);
 
-    const calculatedData: ProductResult[] = [];
-    Object.entries(RATES).forEach(([key, config]) => {
-      const rows: CalculationResult[] = [];
-      const fee = config?.fee || 0;
-      Object.entries(config.rates).forEach(([monthStr, rate]) => {
-        const months = parseInt(monthStr);
-        const total = loan + loan * rate + fee;
-        const monthly = total / months;
-        const overpayment = total - loan;
-        rows.push({ month: months, monthly, total, overpayment, rate: rate });
+    const calculatedData = Object.entries(RATES).map(([key, config]) => {
+      const fee = (config as any).fee || 0;
+      const rows = config.rates.map((r: any) => {
+        // РАСЧЕТ: (Сумма рассрочки + Процент) + 1000 сом комиссии
+        const total = loan + loan * r.rate + fee;
+        return { ...r, monthly: total / r.months, overpayment: total - loan };
       });
-      calculatedData.push({
-        key,
-        title: config.title,
-        type: config.type,
-        rows,
-      });
+      return { key, title: config.title, type: config.type, rows };
     });
     setResults(calculatedData);
   };
 
-  // --- ОБРАБОТЧИК КЛАВИШ ---
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      calculateCommissions();
-    }
-    if (e.key === "Escape") {
-      handleReset();
-    }
-  };
-
-  const handleShareOrCopy = async () => {
+  const handleShare = async () => {
     if (!results) return;
-    let text = `📱 *TomStore.kg: Расчет*\n💰 Цена: ${productPrice} с\n💵 Взнос: ${initialPayment} с\n📉 *Рассрочка: ${formatCurrency(loanAmount)}*\n`;
+    let text = `📱 *TomStore.kg: Расчет рассрочки*\n💰 Цена: ${productPrice} с\n💵 Взнос: ${initialPayment} с\n📉 *К выплате: ${formatCurrency(loanAmount)} с*\n`;
+
     results
       .filter((i) => activeTab === "all" || i.type === activeTab)
       .forEach((p) => {
         text += `\n*${p.title}*:`;
-        p.rows.forEach((r) => {
-          text += `\n ${r.month}мес (${(r.rate * 100).toFixed(0)}%): ${formatCurrency(r.monthly)}/мес`;
+        p.rows.forEach((r: any) => {
+          const typeLabel =
+            r.months === 6 ||
+            r.label === "Cash2U" ||
+            r.label === "M-Plus" ||
+            r.label === "Zero" ||
+            r.label === "МКК"
+              ? `(${r.label})`
+              : "";
+          text += `\n ${r.months} мес ${typeLabel}: ${formatCurrency(r.monthly)} /мес`;
         });
       });
-    text += `\n\n📍 ${STORE_ADDRESS}\n📞 ${STORE_PHONE}`;
-    if (isMobile && canShare && navigator.share) {
+
+    text += `\n\n📝 *Условия:*\n• Паспорт (ID-карта)\n• Без банка (на месте)\n• От 18 лет\n\n📍 ${STORE_ADDRESS}\n📞 ${STORE_PHONE}`;
+
+    if (
+      navigator.share &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ) {
       try {
         await navigator.share({ title: "TomStore", text });
-      } catch (e: Error | unknown) {
-        if (e instanceof Error && e.name !== "AbortError") {
-          setCopySuccess("⚠️ Не удалось поделиться, скопировано в буфер.");
-          navigator.clipboard.writeText(text);
-          setTimeout(() => setCopySuccess(""), 3000);
-        }
-        return;
-      } finally {
-        setCopySuccess("");
-      }
+      } catch (e) {}
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        setCopySuccess("✅ Скопировано!");
+        setCopySuccess("✅ Расчет скопирован!");
         setTimeout(() => setCopySuccess(""), 3000);
       });
     }
   };
 
-  const ProductCard = ({ product }: { product: ProductResult }) => (
-    <div
-      style={{
-        marginBottom: "15px",
-        backgroundColor: "white",
-        borderRadius: "16px",
-        overflow: "hidden",
-        border: "1px solid #eef2f6",
-        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)",
-      }}
-    >
-      <div
-        onClick={() =>
-          openWhatsApp(
-            `Здравствуйте! Хочу оформить "${product.title}" на сумму ${formatCurrency(loanAmount)}.`,
-          )
-        }
-        style={{
-          background: "linear-gradient(to right, #f8fafc, #ffffff)",
-          padding: "14px 18px",
-          borderBottom: "1px solid #f1f5f9",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          cursor: "pointer",
-        }}
-      >
-        <span
-          style={{ fontWeight: "700", color: "#1e293b", fontSize: "1.1em" }}
-        >
-          {product.title}
-        </span>
-        <span
-          style={{
-            fontSize: "0.8em",
-            color: "#10b981",
-            background: "#ecfdf5",
-            padding: "4px 10px",
-            borderRadius: "20px",
-            fontWeight: "600",
-          }}
-        >
-          Заказать ➜
-        </span>
-      </div>
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          fontSize: "0.95em",
-          textAlign: "center",
-        }}
-      >
-        <thead>
-          <tr
-            style={{
-              color: "#64748b",
-              fontSize: "0.8em",
-              textTransform: "uppercase",
-              borderBottom: "1px solid #f8fafc",
-            }}
-          >
-            <th style={{ padding: "12px 4px" }}>Срок</th>
-            <th style={{ padding: "12px 4px", color: "#0f172a" }}>Платеж</th>
-            <th style={{ padding: "12px 4px" }}>Общая</th>
-            <th style={{ padding: "12px 4px", color: "#ef4444" }}>Перепл.</th>
-          </tr>
-        </thead>
-        <tbody>
-          {product.rows.map((row) => (
-            <tr key={row.month} style={{ borderBottom: "1px solid #f5f5f5" }}>
-              <td style={{ padding: "12px 4px" }}>
-                <div style={{ fontWeight: "700" }}>{row.month} мес</div>
-                <div style={{ fontSize: "0.75em", color: "#94a3b8" }}>
-                  {Math.round(row.rate * 100)}%
-                </div>
-              </td>
-              <td
-                style={{
-                  padding: "12px 4px",
-                  fontWeight: "800",
-                  color: "#2563eb",
-                  fontSize: "1.1em",
-                }}
-              >
-                {formatCurrency(row.monthly)}
-              </td>
-              <td style={{ padding: "12px 4px", color: "#475569" }}>
-                {formatCurrency(row.total)}
-              </td>
-              <td
-                style={{
-                  padding: "12px 4px",
-                  color: "#ef4444",
-                  fontSize: "0.85em",
-                  fontWeight: "600",
-                }}
-              >
-                +{formatCurrency(row.overpayment)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
   return (
-    <div
-      className="animated-bg"
-      style={{
-        padding: "20px",
-        maxWidth: "900px",
-        margin: "10px auto",
-        fontFamily: "'Manrope', sans-serif",
-        borderRadius: "24px",
-        border: "1px solid #e2e8f0",
-        minHeight: "95vh",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');`}</style>
+    <div className="main-wrapper">
+      <div className="background-layer"></div>
+      <div className="background-overlay"></div>
 
-      <h1
-        style={{
-          textAlign: "center",
-          background: "linear-gradient(135deg, #0056b3 0%, #3b82f6 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          fontSize: "2.8em",
-          fontWeight: "800",
-          margin: "10px 0 5px",
-        }}
-      >
-        TomStore.kg
-      </h1>
-      <p
-        style={{ textAlign: "center", color: "#64748b", marginBottom: "25px" }}
-      >
-        Компьютеры • Ноутбуки • Принтеры
-      </p>
-
-      {/* РЕКЛАМА */}
       <div
-        style={{
-          marginBottom: "25px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "12px",
-        }}
+        className="container"
+        style={{ fontFamily: "'Manrope', sans-serif" }}
       >
-        {HOT_OFFERS.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              background: "white",
-              padding: "16px",
-              borderRadius: "18px",
-              border: "1px solid #f1f5f9",
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ fontSize: "2.4em" }}>{item.icon}</div>
-              <div>
-                <div style={{ fontWeight: "700", fontSize: "1.05em" }}>
-                  {item.title}
-                </div>
-                <div style={{ fontSize: "0.8em", color: "#64748b" }}>
-                  {item.desc}
-                </div>
-                <div
-                  style={{
-                    fontWeight: "800",
-                    color: "#10b981",
-                    fontSize: "0.9em",
-                  }}
-                >
-                  {item.price}
-                </div>
+        <header className="header">
+          <h1 className="logo">TomStore.kg</h1>
+          <div className="status-badge">Менеджер: Рассрочка</div>
+        </header>
+
+        <div className="offers-scroll">
+          {HOT_OFFERS.map((item) => (
+            <div key={item.id} className="offer-card-mini">
+              <span className="offer-icon">{item.icon}</span>
+              <div className="offer-info">
+                <span className="offer-name">{item.title}</span>
+                <span className="offer-price-tag">{item.price}</span>
               </div>
             </div>
-            <button
-              onClick={() => openWhatsApp(item.title)}
-              style={{
-                background: "#22c55e",
-                color: "white",
-                border: "none",
-                borderRadius: "14px",
-                width: "42px",
-                height: "42px",
-                cursor: "pointer",
-              }}
-            >
-              💬
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* ВВОД */}
-      <div
-        style={{
-          marginBottom: "25px",
-          border: "1px solid #e2e8f0",
-          padding: "24px",
-          borderRadius: "20px",
-          backgroundColor: "rgba(255, 255, 255, 0.8)",
-          backdropFilter: "blur(10px)",
-        }}
-      >
-        {errorMessage && (
-          <div
-            style={{
-              background: "#fee2e2",
-              color: "#b91c1c",
-              padding: "10px",
-              borderRadius: "12px",
-              marginBottom: "15px",
-              textAlign: "center",
-              fontWeight: "600",
-            }}
-          >
-            {errorMessage}
-          </div>
-        )}
-        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "700",
-                color: "#475569",
-              }}
-            >
-              Цена товара:
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={productPrice}
-              onChange={(e) => {
-                setProductPrice(formatInputNumber(e.target.value));
-                setResults(null);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="0"
-              style={{
-                width: "100%",
-                padding: "14px",
-                fontSize: "1.2em",
-                borderRadius: "14px",
-                border: "2px solid #f1f5f9",
-                boxSizing: "border-box",
-                fontWeight: "800",
-                color: "#2563eb",
-                outline: "none",
-              }}
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "700",
-                color: "#475569",
-              }}
-            >
-              Первоначальный взнос:
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={initialPayment}
-              onChange={(e) => {
-                setInitialPayment(formatInputNumber(e.target.value));
-                setResults(null);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="0"
-              style={{
-                width: "100%",
-                padding: "14px",
-                fontSize: "1.2em",
-                borderRadius: "14px",
-                border: "2px solid #f1f5f9",
-                boxSizing: "border-box",
-                fontWeight: "800",
-                outline: "none",
-              }}
-            />
-          </div>
+          ))}
         </div>
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+
+        <div className="glass-card calculator-card">
+          <div className="input-row">
+            <div className="input-group">
+              <label>Цена товара</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={productPrice}
+                onChange={(e) => {
+                  setProductPrice(formatInputNumber(e.target.value));
+                  setResults(null);
+                }}
+              />
+            </div>
+            <div className="input-group">
+              <label>Взнос</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={initialPayment}
+                onChange={(e) => {
+                  setInitialPayment(formatInputNumber(e.target.value));
+                  setResults(null);
+                }}
+              />
+            </div>
+          </div>
           <button
-            onClick={calculateCommissions}
-            style={{
-              flex: 2,
-              padding: "16px",
-              backgroundColor: "#2563eb",
-              color: "white",
-              border: "none",
-              borderRadius: "14px",
-              cursor: "pointer",
-              fontSize: "1.1em",
-              fontWeight: "700",
-            }}
+            className="btn-main"
+            onClick={calculate}
+            style={{ background: "#2563eb" }}
           >
             Рассчитать (Enter)
           </button>
-          <button
-            onClick={handleReset}
-            style={{
-              flex: 1,
-              padding: "16px",
-              backgroundColor: "#f1f5f9",
-              color: "#64748b",
-              border: "none",
-              borderRadius: "14px",
-              cursor: "pointer",
-              fontSize: "1.1em",
-            }}
-          >
-            Сброс
-          </button>
         </div>
-      </div>
 
-      {/* РЕЗУЛЬТАТЫ */}
-      {results && (
-        <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              background: "white",
-              padding: "18px",
-              borderRadius: "18px",
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  fontSize: "0.85em",
-                  color: "#64748b",
-                  fontWeight: "600",
-                }}
-              >
-                Сумма рассрочки:
-              </span>
-              <div
-                style={{
-                  color: "#2563eb",
-                  fontSize: "1.6em",
-                  fontWeight: "800",
-                }}
-              >
-                {formatCurrency(loanAmount)} KG
+        {results && (
+          <div className="results-wrapper">
+            <div className="summary-bar glass-card">
+              <div className="loan-info">
+                <span className="label">Сумма рассрочки</span>
+                <span className="value">{formatCurrency(loanAmount)} KG</span>
               </div>
-            </div>
-            <button
-              onClick={handleShareOrCopy}
-              style={{
-                padding: "12px 20px",
-                backgroundColor: "#1e293b",
-                color: "white",
-                border: "none",
-                borderRadius: "12px",
-                cursor: "pointer",
-                fontWeight: "700",
-              }}
-            >
-              {isMobile ? "📲 Поделиться" : "📋 Копировать"}
-            </button>
-          </div>
-          {copySuccess && (
-            <div
-              style={{
-                textAlign: "center",
-                color: "#10b981",
-                marginBottom: "10px",
-                fontWeight: "700",
-              }}
-            >
-              {copySuccess}
-            </div>
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              marginBottom: "20px",
-              overflowX: "auto",
-              paddingBottom: "8px",
-            }}
-          >
-            {[
-              { id: "all", label: "Все" },
-              { id: "bank", label: "🏦 Банки" },
-              { id: "islamic", label: "☪️ Исламские" },
-              { id: "fast", label: "⚡ МКК" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: "14px",
-                  border: "none",
-                  background: activeTab === tab.id ? "#2563eb" : "white",
-                  color: activeTab === tab.id ? "white" : "#64748b",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {tab.label}
+              <button className="btn-icon-text" onClick={handleShare}>
+                📲 Отправить
               </button>
-            ))}
-          </div>
+            </div>
 
-          <div>
+            {copySuccess && <div className="toast-success">{copySuccess}</div>}
+
+            <div className="tabs">
+              {[
+                { id: "all", label: "Все" },
+                { id: "bank", label: "🏦 Банк" },
+                { id: "islamic", label: "☪️ Ислам" },
+                { id: "fast", label: "⚡ Без банка" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`tab-item ${activeTab === tab.id ? "active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {results
               .filter((i) => activeTab === "all" || i.type === activeTab)
-              .map((item) => (
-                <ProductCard key={item.key} product={item} />
+              .map((product) => (
+                <div key={product.key} className="glass-card product-results">
+                  <div className="product-title-bar">
+                    <h3 style={{ color: "#60a5fa", margin: "0 0 10px 0" }}>
+                      {product.title}
+                    </h3>
+                  </div>
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        <th>Срок</th>
+                        <th>В месяц</th>
+                        <th>Переплата</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {product.rows.map((row: any, idx: number) => (
+                        <tr
+                          key={idx}
+                          style={
+                            row.color ? { background: `${row.color}15` } : {}
+                          }
+                        >
+                          <td
+                            style={{ textAlign: "left", paddingLeft: "10px" }}
+                          >
+                            <span
+                              className="month-val"
+                              style={{ color: "#fff", fontWeight: "800" }}
+                            >
+                              {row.months} мес
+                            </span>
+                            <span
+                              className="rate-badge"
+                              style={{
+                                color: row.color || "#3b82f6",
+                                fontWeight: "bold",
+                                fontSize: "0.7em",
+                              }}
+                            >
+                              {row.label} ({row.showRate})
+                            </span>
+                          </td>
+                          <td
+                            className="monthly-val"
+                            style={{ color: "#fff", fontWeight: "800" }}
+                          >
+                            {formatCurrency(row.monthly)}
+                          </td>
+                          <td
+                            className="overpayment-val"
+                            style={{ color: "#ef4444", fontWeight: "600" }}
+                          >
+                            +{formatCurrency(row.overpayment)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* FOOTER */}
-      <div
-        style={{ marginTop: "auto", paddingTop: "30px", textAlign: "center" }}
-      >
-        <p style={{ margin: "5px 0", fontWeight: "700" }}>📍 {STORE_ADDRESS}</p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "20px",
-            alignItems: "center",
-            margin: "15px 0",
-          }}
-        >
-          <a
-            href={`tel:${STORE_PHONE_CLEAN}`}
-            style={{
-              color: "#2563eb",
-              textDecoration: "none",
-              fontWeight: "800",
-            }}
+        <footer className="footer glass-card">
+          <p
+            style={{ fontSize: "0.8em", color: "#94a3b8", textAlign: "center" }}
           >
-            📞 {STORE_PHONE}
-          </a>
-
-          <a
-            href={`https://wa.me/${WHATSAPP_PHONE}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#22c55e", fontSize: "1.6em" }}
+            📍 {STORE_ADDRESS}
+          </p>
+          <div
+            className="footer-actions"
+            style={{ display: "flex", gap: "10px", marginTop: "10px" }}
           >
-            💬
-          </a>
-        </div>
-        <>
-          {/* instagram  link*/}
-          <a
-            href={INSTAGRAM_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "#e1306c",
-              textDecoration: "none",
-              fontWeight: "600",
-            }}
-          >
-            📸 Наш Instagram
-          </a>
-        </>
-
-        <p>
-          <a
-            href={STORE_2GIS}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "#64748b",
-              textDecoration: "none",
-              borderBottom: "1px dashed #cbd5e1",
-              fontSize: "0.9em",
-            }}
-          >
-            Найти нас в 2GIS
-          </a>
-        </p>
+            <a
+              href={`tel:${WHATSAPP_PHONE}`}
+              className="btn-footer"
+              style={{
+                flex: 1,
+                textAlign: "center",
+                background: "#334155",
+                padding: "10px",
+                borderRadius: "10px",
+                color: "#fff",
+                textDecoration: "none",
+              }}
+            >
+              📞 Позвонить
+            </a>
+            <a
+              href={`https://wa.me/${WHATSAPP_PHONE}`}
+              className="btn-footer"
+              style={{
+                flex: 1,
+                textAlign: "center",
+                background: "#22c55e",
+                padding: "10px",
+                borderRadius: "10px",
+                color: "#fff",
+                textDecoration: "none",
+              }}
+            >
+              💬 WhatsApp
+            </a>
+          </div>
+        </footer>
       </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
+        .main-wrapper { min-height: 100vh; position: relative; padding: 20px 10px; background: #0f172a; overflow-x: hidden; }
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('./assets/image.png'); background-size: cover; background-position: center; z-index: -2; }
+        .background-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.98) 100%); backdrop-filter: blur(15px); z-index: -1; }
+        .container { max-width: 500px; margin: 0 auto; color: #f8fafc; }
+        .logo { font-size: 2.2em; font-weight: 800; color: #3b82f6; margin-bottom: 5px; }
+        .status-badge { font-size: 0.7em; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
+        .offers-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin: 20px 0; scrollbar-width: none; }
+        .offer-card-mini { background: rgba(255, 255, 255, 0.05); padding: 10px 15px; border-radius: 14px; min-width: 130px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass-card { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.7em; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; }
+        .input-group input { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid #334155; padding: 12px; border-radius: 12px; color: #fff; font-size: 1.2em; font-weight: 700; box-sizing: border-box; outline: none; }
+        .btn-main { border: none; cursor: pointer; transition: 0.2s; }
+        .btn-main:active { transform: scale(0.98); }
+        .tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 15px; scrollbar-width: none; }
+        .tab-item { padding: 10px 18px; border-radius: 12px; background: #1e293b; border: none; color: #94a3b8; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .tab-item.active { background: #3b82f6; color: #fff; }
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th { font-size: 0.6em; color: #64748b; text-transform: uppercase; padding-bottom: 10px; }
+        .results-table td { padding: 12px 5px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; }
+        .toast-success { text-align: center; color: #10b981; font-weight: 700; margin-bottom: 10px; font-size: 0.9em; }
+      `}</style>
     </div>
   );
 }
