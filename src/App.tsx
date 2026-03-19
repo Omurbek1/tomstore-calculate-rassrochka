@@ -195,7 +195,7 @@ function App() {
           <div className="results-wrapper">
             <div className="summary-bar glass-card">
               <div className="loan-info">
-                <span className="label">Сумма рассрочки</span>
+                <span className="label">Сумма рассрочки<br/></span>
                 <span className="value">{formatCurrency(loanAmount)} KG</span>
               </div>
               <button className="btn-icon-text" onClick={handleShare}>
