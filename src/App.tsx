@@ -59,7 +59,7 @@ const RATES = {
   mkk: {
     title: "💰 Без банка (МКК)",
     type: "fast",
-    fee: 1000, // ФИКСИРОВАННАЯ КОМИССИЯ 1000 СОМ
+    fee: 1000,
     rates: [
       { months: 3, rate: 0.15, label: "МКК", showRate: "15% + 1000с" },
       { months: 6, rate: 0.25, label: "МКК", showRate: "25% + 1000с" },
@@ -67,13 +67,6 @@ const RATES = {
     ],
   },
 };
-
-const HOT_OFFERS = [
-  { id: 1, title: "Ноутбуки", price: "от 25 000 с", icon: "💻" },
-  { id: 2, title: "Принтеры", price: "от 4 500 с", icon: "🖨️" },
-  { id: 3, title: "Сборка ПК", price: "Game / Office", icon: "🖥️" },
-  { id: 4, title: "Запчасти", price: "от 1 500 с", icon: "💾" },
-];
 
 const formatCurrency = (val: number) =>
   Math.round(val)
@@ -102,13 +95,21 @@ function App() {
     const calculatedData = Object.entries(RATES).map(([key, config]) => {
       const fee = (config as any).fee || 0;
       const rows = config.rates.map((r: any) => {
-        // РАСЧЕТ: (Сумма рассрочки + Процент) + 1000 сом комиссии
-        const total = loan + loan * r.rate + fee;
-        return { ...r, monthly: total / r.months, overpayment: total - loan };
+        const totalAmount = loan + loan * r.rate + fee;
+        return {
+          ...r,
+          monthly: totalAmount / r.months,
+          total: totalAmount,
+          overpayment: totalAmount - loan,
+        };
       });
       return { key, title: config.title, type: config.type, rows };
     });
     setResults(calculatedData);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") calculate();
   };
 
   const handleShare = async () => {
@@ -121,18 +122,12 @@ function App() {
         text += `\n*${p.title}*:`;
         p.rows.forEach((r: any) => {
           const typeLabel =
-            r.months === 6 ||
-            r.label === "Cash2U" ||
-            r.label === "M-Plus" ||
-            r.label === "Zero" ||
-            r.label === "МКК"
-              ? `(${r.label})`
-              : "";
-          text += `\n ${r.months} мес ${typeLabel}: ${formatCurrency(r.monthly)} /мес`;
+            r.months === 6 || r.label !== "Стандарт" ? `(${r.label})` : "";
+          text += `\n ${r.months} мес ${typeLabel}: ${formatCurrency(r.monthly)} /мес (Всего: ${formatCurrency(r.total)})`;
         });
       });
 
-    text += `\n\n📝 *Условия:*\n• Паспорт (ID-карта)\n• Без банка (на месте)\n• От 18 лет\n\n📍 ${STORE_ADDRESS}\n📞 ${STORE_PHONE}`;
+    text += `\n\n📝 *Условия:*\n• Паспорт (ID-карта)\n• Без банка (на месте)\n• 18+ лет\n\n📍 ${STORE_ADDRESS}\n📞 ${STORE_PHONE}`;
 
     if (
       navigator.share &&
@@ -143,7 +138,7 @@ function App() {
       } catch (e) {}
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        setCopySuccess("✅ Расчет скопирован!");
+        setCopySuccess("✅ Данные скопированы!");
         setTimeout(() => setCopySuccess(""), 3000);
       });
     }
@@ -154,29 +149,14 @@ function App() {
       <div className="background-layer"></div>
       <div className="background-overlay"></div>
 
-      <div
-        className="container"
-        style={{ fontFamily: "'Manrope', sans-serif" }}
-      >
+      <div className="container">
         <header className="header">
           <h1 className="logo">TomStore.kg</h1>
           <div className="status-badge">Менеджер: Рассрочка</div>
         </header>
 
-        <div className="offers-scroll">
-          {HOT_OFFERS.map((item) => (
-            <div key={item.id} className="offer-card-mini">
-              <span className="offer-icon">{item.icon}</span>
-              <div className="offer-info">
-                <span className="offer-name">{item.title}</span>
-                <span className="offer-price-tag">{item.price}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         <div className="glass-card calculator-card">
-          <div className="input-row">
+          <div className="input-grid">
             <div className="input-group">
               <label>Цена товара</label>
               <input
@@ -188,6 +168,7 @@ function App() {
                   setProductPrice(formatInputNumber(e.target.value));
                   setResults(null);
                 }}
+                onKeyDown={handleKeyDown}
               />
             </div>
             <div className="input-group">
@@ -201,14 +182,11 @@ function App() {
                   setInitialPayment(formatInputNumber(e.target.value));
                   setResults(null);
                 }}
+                onKeyDown={handleKeyDown}
               />
             </div>
           </div>
-          <button
-            className="btn-main"
-            onClick={calculate}
-            style={{ background: "#2563eb" }}
-          >
+          <button className="btn-main" onClick={calculate}>
             Рассчитать (Enter)
           </button>
         </div>
@@ -227,90 +205,92 @@ function App() {
 
             {copySuccess && <div className="toast-success">{copySuccess}</div>}
 
-            <div className="tabs">
-              {[
-                { id: "all", label: "Все" },
-                { id: "bank", label: "🏦 Банк" },
-                { id: "islamic", label: "☪️ Ислам" },
-                { id: "fast", label: "⚡ Без банка" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  className={`tab-item ${activeTab === tab.id ? "active" : ""}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="tabs-container">
+              <div className="tabs-scroll">
+                {[
+                  { id: "all", label: "Все" },
+                  { id: "bank", label: "🏦 Банк" },
+                  { id: "islamic", label: "☪️ Ислам" },
+                  { id: "fast", label: "⚡ Без банка" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    className={`tab-item ${activeTab === tab.id ? "active" : ""}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {results
               .filter((i) => activeTab === "all" || i.type === activeTab)
               .map((product) => (
                 <div key={product.key} className="glass-card product-results">
-                  <div className="product-title-bar">
-                    <h3 style={{ color: "#60a5fa", margin: "0 0 10px 0" }}>
-                      {product.title}
-                    </h3>
-                  </div>
-                  <table className="results-table">
-                    <thead>
-                      <tr>
-                        <th>Срок</th>
-                        <th>В месяц</th>
-                        <th>Переплата</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {product.rows.map((row: any, idx: number) => (
-                        <tr
-                          key={idx}
-                          style={
-                            row.color ? { background: `${row.color}15` } : {}
-                          }
-                        >
-                          <td
-                            style={{ textAlign: "left", paddingLeft: "10px" }}
-                          >
-                            <span
-                              className="month-val"
-                              style={{ color: "#fff", fontWeight: "800" }}
-                            >
-                              {row.months} мес
-                            </span>
-                            <span
-                              className="rate-badge"
-                              style={{
-                                color: row.color || "#3b82f6",
-                                fontWeight: "bold",
-                                fontSize: "0.7em",
-                              }}
-                            >
-                              {row.label} ({row.showRate})
-                            </span>
-                          </td>
-                          <td
-                            className="monthly-val"
-                            style={{ color: "#fff", fontWeight: "800" }}
-                          >
-                            {formatCurrency(row.monthly)}
-                          </td>
-                          <td
-                            className="overpayment-val"
-                            style={{ color: "#ef4444", fontWeight: "600" }}
-                          >
-                            +{formatCurrency(row.overpayment)}
-                          </td>
+                  <h3 className="product-title">{product.title}</h3>
+                  <div className="table-responsive">
+                    <table className="results-table">
+                      <thead>
+                        <tr>
+                          <th>Срок</th>
+                          <th>Платеж</th>
+                          <th>Итого</th>
+                          <th>Перепл.</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {product.rows.map(
+                          (
+                            row: {
+                              months: number;
+                              monthly: number;
+                              total: number;
+                              interest: number;
+                              color?: string;
+                              label: string;
+                            },
+                            idx: number,
+                          ) => (
+                            <tr
+                              key={idx}
+                              style={
+                                row.color
+                                  ? { background: `${row.color}10` }
+                                  : {}
+                              }
+                            >
+                              <td className="cell-term">
+                                <span className="m-val">{row.months}м</span>
+                                <span
+                                  className="l-val"
+                                  style={{ color: row.color || "#3b82f6" }}
+                                >
+                                  {row.label}
+                                </span>
+                              </td>
+                              <td className="cell-monthly">
+                                {formatCurrency(row.monthly)}
+                              </td>
+                              <td className="cell-total">
+                                {formatCurrency(row.total)}
+                              </td>
+                              <td className="cell-over">
+                                {formatCurrency(row.overpayment)}
+                              </td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ))}
           </div>
         )}
 
-        <footer className="footer glass-card">
+        <footer className="footer-info">
+          {" "}
           <p
             style={{ fontSize: "0.8em", color: "#94a3b8", textAlign: "center" }}
           >
@@ -356,27 +336,50 @@ function App() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
-        .main-wrapper { min-height: 100vh; position: relative; padding: 20px 10px; background: #0f172a; overflow-x: hidden; }
+        
+        .main-wrapper { min-height: 100vh; position: relative; padding: 15px 10px; background: #000; font-family: 'Manrope', sans-serif; overflow-x: hidden; }
         .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('./assets/image.png'); background-size: cover; background-position: center; z-index: -2; }
-        .background-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.98) 100%); backdrop-filter: blur(15px); z-index: -1; }
-        .container { max-width: 500px; margin: 0 auto; color: #f8fafc; }
-        .logo { font-size: 2.2em; font-weight: 800; color: #3b82f6; margin-bottom: 5px; }
-        .status-badge { font-size: 0.7em; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
-        .offers-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin: 20px 0; scrollbar-width: none; }
-        .offer-card-mini { background: rgba(255, 255, 255, 0.05); padding: 10px 15px; border-radius: 14px; min-width: 130px; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .glass-card { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
-        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.7em; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; font-weight: 700; }
-        .input-group input { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid #334155; padding: 12px; border-radius: 12px; color: #fff; font-size: 1.2em; font-weight: 700; box-sizing: border-box; outline: none; }
-        .btn-main { border: none; cursor: pointer; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); }
-        .tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 15px; scrollbar-width: none; }
-        .tab-item { padding: 10px 18px; border-radius: 12px; background: #1e293b; border: none; color: #94a3b8; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .background-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 100%); backdrop-filter: blur(10px); z-index: -1; }
+        
+        .container { max-width: 500px; margin: 0 auto; color: #fff; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .logo { font-size: 2em; font-weight: 800; color: #3b82f6; margin: 0; }
+        .status-badge { font-size: 0.65em; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+
+        .glass-card { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; margin-bottom: 15px; }
+        
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        @media (max-width: 400px) { .input-grid { grid-template-columns: 1fr; } }
+        
+        .input-group label { display: block; font-size: 0.65em; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .input-group input { width: 100%; background: #000; border: 1px solid #334155; padding: 10px; border-radius: 10px; color: #fff; font-size: 1.1em; font-weight: 700; box-sizing: border-box; outline: none; }
+        .btn-main { width: 100%; padding: 14px; background: #2563eb; border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 0.9em; cursor: pointer; }
+
+        .summary-bar { display: flex; justify-content: space-between; align-items: center; }
+        .loan-info .value { font-size: 1.3em; font-weight: 800; color: #3b82f6; }
+        .btn-icon-text { background: #fff; color: #000; border: none; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 0.8em; }
+
+        .tabs-container { margin-bottom: 15px; }
+        .tabs-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .tabs-scroll::-webkit-scrollbar { display: none; }
+        .tab-item { padding: 8px 15px; border-radius: 10px; background: #1e293b; border: none; color: #94a3b8; font-weight: 700; font-size: 0.75em; white-space: nowrap; }
         .tab-item.active { background: #3b82f6; color: #fff; }
-        .results-table { width: 100%; border-collapse: collapse; }
-        .results-table th { font-size: 0.6em; color: #64748b; text-transform: uppercase; padding-bottom: 10px; }
-        .results-table td { padding: 12px 5px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; }
-        .toast-success { text-align: center; color: #10b981; font-weight: 700; margin-bottom: 10px; font-size: 0.9em; }
+
+        .product-title { font-size: 0.9em; color: #60a5fa; margin: 0 0 12px 0; border-left: 3px solid #3b82f6; padding-left: 8px; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        .results-table { width: 100%; border-collapse: collapse; min-width: 320px; }
+        .results-table th { font-size: 0.55em; color: #64748b; text-transform: uppercase; padding-bottom: 8px; text-align: center; }
+        .results-table td { padding: 10px 4px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 0.85em; }
+        
+        .cell-term { text-align: left !important; padding-left: 5px !important; }
+        .m-val { display: block; font-weight: 800; }
+        .l-val { display: block; font-size: 0.6em; font-weight: 700; }
+        .cell-monthly { font-weight: 800; color: #fff; }
+        .cell-total { color: #94a3b8; font-size: 0.75em; }
+        .cell-over { color: #ef4444; font-weight: 600; font-size: 0.75em; }
+
+        .footer-info { text-align: center; font-size: 0.65em; color: #475569; margin-top: 10px; padding-bottom: 20px; }
+        .toast-success { text-align: center; color: #10b981; font-weight: 700; font-size: 0.8em; margin-bottom: 10px; }
       `}</style>
     </div>
   );
